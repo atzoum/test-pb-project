@@ -1,0 +1,40 @@
+name: sample_project
+schema_version: 72
+time_to_live: 24h
+connection: test
+model_folders:
+  - models
+entities:
+  - name: users
+    id_stitcher: models/id_graph_users
+    id_column_name: profile_id
+    id_types:
+      - user_id
+      - anonymous_id
+      - email
+      - session_id
+    feature_views:
+      using_ids:
+        - id: user_id
+          name: user_id_stitched_features
+        - id: email
+          name: email_features
+id_types:
+  - name: user_id
+    filters:
+      - type: exclude
+        value: "{}"
+  - name: anonymous_id
+    filters:
+      - type: exclude
+        value: "unknown"
+      - type: exclude
+        value: "NaN"
+  - name: profile_id
+  - name: session_id
+  - name: email
+    filters:
+      - type: include
+        regex: ".+@.+"
+      - type: exclude
+        value: "test@company.com"
