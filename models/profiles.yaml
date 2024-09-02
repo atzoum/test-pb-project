@@ -3,7 +3,6 @@ models:
     model_type: id_stitcher
     model_spec:
       entity_key: users
-      time_grain: "hour"
       materialization:
         run_type: incremental
       edge_sources:
@@ -14,57 +13,37 @@ models:
     model_type: entity_cohort
     model_spec:
       extends: users/all
-      time_grain: "day"
       materialization:
         output_type: table
       filter_pipeline:
-        # exclude ids which don't have any other_id_type of email
         - type: exclude
-          value: "{{ users.Var('id_type_email_count_daily') }} = 0"
+          value: "{{ users.Var('id_type_email_count') }} = 0"
   - name: user_profiles
     model_type: feature_table_model
     model_spec:
-      time_grain: "day"
       entity_cohort: models/knownUsers
       features:
-        - first_activity_time_weekly
-        - first_activity_time_daily_mixed
-        - campaign_name_daily
-        - campaign_medium_daily
+        - first_activity_time
+        - campaign_name
+        - campaign_medium
 var_groups:
   - name: user_all_vars
     entity_key: users
-    time_grain: "day"
     vars:
       - entity_var:
-          name: id_type_email_count_daily
+          name: id_type_email_count
           from: models/id_graph_users
           select: sum(case when other_id_type = 'email' then 1 else 0 end)
-  - name: user_known_weekly_vars
+  - name: user_known_vars
     entity_cohort: models/knownUsers
-    time_grain: "week"
     vars:
       - entity_var:
-          name: first_activity_time_weekly
+          name: first_activity_time
           select: min(timestamp)
-          from: inputs/rsPages # min timestamp from another table
-          description: First Activity Time
-  - name: user_known_daily_vars
-    entity_cohort: models/knownUsers
-    time_grain: "day"
-    vars:
-      - entity_var:
-          name: first_activity_time_daily
-          select: min(timestamp)
-          from: inputs/rsTracks
-          description: First Activity Time
-          is_feature: False
-      - entity_var:
-          name: first_activity_time_daily_mixed
-          select: least({{knownUsers.Var("first_activity_time_daily")}}, {{knownUsers.Var("first_activity_time_weekly")}})
+          from: inputs/rsPages 
           description: First Activity Time
       - entity_var:
-          name: campaign_name_daily
+          name: campaign_name
           select: first_value(context_campaign_name)
           from: models/marketing_pages
           window:
@@ -73,7 +52,7 @@ var_groups:
             frame_clause: rows between unbounded preceding and unbounded following
           description: context campaign name
       - entity_var:
-          name: campaign_medium_daily
+          name: campaign_medium
           select: first_value(context_campaign_medium)
           from: models/marketing_pages
           window:
